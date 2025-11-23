@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/quiz_repository.dart';
+// 현재 Mock인데, 실제 FastAPI 연동 시 교체됨
 import '../data/quiz_repository_mock.dart';
 
 class QuizScreen extends StatefulWidget {
@@ -12,7 +13,18 @@ class QuizScreen extends StatefulWidget {
 }
 
 class _QuizScreenState extends State<QuizScreen> {
-  final _repo = MockQuizRepository(); // ⛳️ DB 붙이면 교체
+
+  // ============================================================
+  // ⛳ 현재는 Mock 저장소.
+  // ❗❗ 실제 FastAPI 서버 연동 시에는
+  //     final _repo = ApiQuizRepository();  로 교체해야 함.
+  //
+  // ApiQuizRepository는 GET/POST 구현:
+  //   GET  /quizzes          → 문제 불러오기
+  //   POST /quizzes/grade    → 채점 요청
+  // ============================================================
+  final _repo = MockQuizRepository(); // ⛳️ DB 붙이면 ApiQuizRepository() 로 교체
+
   List<QuizItem> _items = [];
   int _idx = 0;
   late List<String?> _answers;
@@ -24,13 +36,21 @@ class _QuizScreenState extends State<QuizScreen> {
     _load();
   }
 
+  // ============================================================
+  // 🔵 ① 퀴즈 문항 불러오기 (FastAPI GET 필요)
+  //
+  // 실제 API 예시:
+  // GET /quiz?limit=10
+  //
+  // Flutter 예시:
+  // final res = await http.get(Uri.parse('$BASE/quiz?limit=10'));
+  // final data = jsonDecode(res.body);
+  // _items = data.map((e)=>QuizItem.fromJson(e)).toList();
+  //
+  // 현재는 mock 사용 (테스트용)
+  // ============================================================
   Future<void> _load() async {
-    // ##########################
-    // [DB 데이터삽입부분] 문제 리스트를 DB에서 가져오기
-    // 예) final list = await DBHelper.fetchQuizItems();
-    // ##########################
-
-    final list = await _repo.fetchQuizItems(); // 데모용
+    final list = await _repo.fetchQuizItems();  // ← 실제 GET API로 변경됨
     _items = list.take(10).toList();
     _answers = List<String?>.filled(_items.length, null);
     setState(() => _loading = false);
@@ -38,15 +58,35 @@ class _QuizScreenState extends State<QuizScreen> {
 
   void _setAnswer(String? v) => _answers[_idx] = v;
 
+  // ============================================================
+  // 🔵 ② 채점 요청 (FastAPI POST 필요)
+  //
+  // 실제 API 예시:
+  // POST /quiz/grade
+  // body:
+  // {
+  //   "items": [...],
+  //   "answers": [...]
+  // }
+  //
+  // Flutter 예시:
+  // final res = await http.post(
+  //    Uri.parse('$BASE/quiz/grade'),
+  //    headers: {"Content-Type":"application/json"},
+  //    body: jsonEncode({
+  //      "items": _items.map((e)=>e.toJson()).toList(),
+  //      "answers": _answers,
+  //    })
+  // );
+  // final result = QuizResult.fromJson(jsonDecode(res.body));
+  //
+  // 현재는 mock 사용 (로컬 채점)
+  // ============================================================
   Future<void> _finish() async {
-    // ##########################
-    // [DB 데이터삽입부분] 서버에서 채점/결과 받기
-    // 예) final result = await DBHelper.grade(items: _items, answers: _answers);
-    // ##########################
-
-    final result = await _repo.grade(items: _items, userAnswers: _answers); // 데모
-
+    final result = await _repo.grade(items: _items, userAnswers: _answers); // 실제는 POST API 호출
     if (!mounted) return;
+
+    // 결과 화면으로 전달
     Navigator.pushNamed(context, '/quiz_result', arguments: {
       'level': result.level,
       'rate': result.rate,
@@ -69,7 +109,7 @@ class _QuizScreenState extends State<QuizScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 상단 헤더 + 질문 카드
+            // ───────────── 헤더 + 뒤로가기 버튼 ─────────────
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -79,13 +119,34 @@ class _QuizScreenState extends State<QuizScreen> {
               ),
               child: Column(
                 children: [
-                  const SizedBox(height: 6),
-                  const Text('📝 수준 진단 퀴즈',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const Spacer(),
+                      const Text(
+                        '📝 수준 진단 퀴즈',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      Opacity(
+                        opacity: 0,
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                          onPressed: () {},
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
                   Text('${_idx + 1} / ${_items.length}',
                       style: const TextStyle(fontSize: 16)),
                   const SizedBox(height: 16),
+
+                  // 질문 박스 UI
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -93,17 +154,20 @@ class _QuizScreenState extends State<QuizScreen> {
                       color: const Color(0xFFD6E6FA),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Text(q.question,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                    child: Text(
+                      q.question,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ],
               ),
             ),
+            // ────────────────────────────────────────────────
 
             const SizedBox(height: 18),
 
-            // 유형별 본문 (위젯 3종을 이 파일 안에 구현)
+            // 문제 본문
             Expanded(
               child: Builder(
                 builder: (_) {
@@ -121,14 +185,12 @@ class _QuizScreenState extends State<QuizScreen> {
               ),
             ),
 
-            // 하단 네비 버튼
+            // 하단 버튼 (이전 / 다음 / 제출)
             Padding(
               padding: const EdgeInsets.only(bottom: 16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _navButton('뒤로', () => Navigator.pop(context)),
-                  const SizedBox(width: 8),
                   _navButton('이전 질문', () {
                     if (_idx > 0) setState(() => _idx--);
                   }),
@@ -137,7 +199,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     if (_idx < _items.length - 1) {
                       setState(() => _idx++);
                     } else {
-                      _finish();
+                      _finish();  // 🔵 여기에서 FastAPI POST 호출
                     }
                   }),
                 ],
@@ -164,7 +226,7 @@ class _QuizScreenState extends State<QuizScreen> {
 }
 
 /// =======================================
-/// 아래부터: 이 파일 안에 포함된 문항 위젯 3종
+/// 아래부터: 질문 위젯들 (서버 연동 전혀 필요 없음)
 /// =======================================
 
 class _OXQuestion extends StatefulWidget {
@@ -178,29 +240,6 @@ class _OXQuestion extends StatefulWidget {
 class _OXQuestionState extends State<_OXQuestion> {
   String? selected;
 
-  Widget _square(String label) {
-    final isSel = selected == label;
-    return GestureDetector(
-      onTap: () {
-        setState(() => selected = label);
-        widget.onAnswer(selected);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: 110,
-        height: 110,
-        decoration: BoxDecoration(
-          color: const Color(0xFFD6E6FA),
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [if (isSel) const BoxShadow(blurRadius: 8, offset: Offset(0, 4))],
-          border: Border.all(color: isSel ? const Color(0xFFE53935) : Colors.transparent, width: 2),
-        ),
-        alignment: Alignment.center,
-        child: const Text('O / X', style: TextStyle(fontSize: 0)), // 접근성
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -209,32 +248,36 @@ class _OXQuestionState extends State<_OXQuestion> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            GestureDetector(
-              onTap: () { setState(() => selected = 'O'); widget.onAnswer('O'); },
-              child: _tile('O', selected == 'O'),
-            ),
-            GestureDetector(
-              onTap: () { setState(() => selected = 'X'); widget.onAnswer('X'); },
-              child: _tile('X', selected == 'X'),
-            ),
+            _tile('O'),
+            _tile('X'),
           ],
         ),
       ],
     );
   }
 
-  Widget _tile(String label, bool active) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      width: 110, height: 110,
-      decoration: BoxDecoration(
-        color: const Color(0xFFD6E6FA),
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [if (active) const BoxShadow(blurRadius: 8, offset: Offset(0, 4))],
-        border: Border.all(color: active ? const Color(0xFFE53935) : Colors.transparent, width: 2),
+  Widget _tile(String label) {
+    final active = selected == label;
+    return GestureDetector(
+      onTap: () {
+        setState(() => selected = label);
+        widget.onAnswer(selected);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 110, height: 110,
+        decoration: BoxDecoration(
+          color: const Color(0xFFD6E6FA),
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [if (active) const BoxShadow(blurRadius: 8, offset: Offset(0, 4))],
+          border: Border.all(
+            color: active ? const Color(0xFFE53935) : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(label, style: const TextStyle(fontSize: 48, color: Color(0xFFE53935))),
       ),
-      alignment: Alignment.center,
-      child: Text(label, style: const TextStyle(fontSize: 48, color: Color(0xFFE53935))),
     );
   }
 }
@@ -284,7 +327,10 @@ class _ShortQuestion extends StatefulWidget {
 class _ShortQuestionState extends State<_ShortQuestion> {
   final _ctrl = TextEditingController();
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

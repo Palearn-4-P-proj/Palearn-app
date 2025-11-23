@@ -44,9 +44,41 @@ class QuizResult {
 }
 
 /// ===== DB 연동용 인터페이스 =====
+///
+/// ※ 여기가 Flutter <-> FastAPI 통신을 실제로 구현해야 하는 부분.
+///   실제 구현체(예: APIQuizRepository)는 이 인터페이스를 구현함.
+///
+/// FastAPI 예시 API 구조:
+///   GET  /quiz/items        → 문제 리스트 조회
+///   POST /quiz/grade        → 채점 요청(문제 ID + userAnswers)
+///
 abstract class QuizRepository {
+
+  /// ============================================
+  /// TODO: GET /quiz/items
+  /// - 백엔드에서 퀴즈 목록을 받아오는 통신 필요
+  /// - 반환 값: List<QuizItem> (JSON 리스트)
+  /// ============================================
   Future<List<QuizItem>> fetchQuizItems();
 
+  /// ============================================
+  /// TODO: POST /quiz/grade
+  /// - 사용자의 답안을 FastAPI로 전송해 채점 요청
+  /// - 전송 데이터 예시:
+  ///     {
+  ///       "answers": [
+  ///         {"id": 1, "userAnswer": "O"},
+  ///         {"id": 2, "userAnswer": "2"},
+  ///         ...
+  ///       ]
+  ///     }
+  /// - FastAPI가 채점 후 응답:
+  ///     {
+  ///       "total": 10,
+  ///       "correct": 7,
+  ///       "detail": [true, false, ...]
+  ///     }
+  /// ============================================
   Future<QuizResult> grade({
     required List<QuizItem> items,
     required List<String?> userAnswers,

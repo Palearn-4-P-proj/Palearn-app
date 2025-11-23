@@ -47,20 +47,45 @@ class _RecommendLoadingScreenState extends State<RecommendLoadingScreen> {
   }
 
   Future<void> _applyRecommendationAndGoHome() async {
-    // ##########################
-    // [DB/추천 API 연동]
-    // - 퀴즈 결과/선택 강좌를 바탕으로 Daily/Weekly/Monthly 계획 생성 또는 업데이트
-    // - 예)
-    // await PlanAPI.applyRecommendation(
-    //   selectedCourse: selectedCourse,
-    //   quizLevel: quizLevel,
-    //   quizDetails: quizDetails,
-    // );
-    // ##########################
+
+    // ======================================================================
+    // 🔵 [FastAPI POST 필요 — 추천 기반 학습 계획 생성 API]
+    //
+    // 사용자의 퀴즈 결과 + 선택한 강좌 + 기존 학습 계획 여부를 기반으로,
+    // 서버에서 Daily / Weekly / Monthly 학습 계획을 자동 생성.
+    //
+    // 예시 FastAPI:
+    //   POST /plan/apply_recommendation
+    //
+    // body 예시:
+    // {
+    //   "user_id": "...",
+    //   "selected_course": selectedCourse,
+    //   "quiz_level": "...",
+    //   "quiz_details": [...],
+    // }
+    //
+    // Flutter 예시:
+    //   await http.post(
+    //     Uri.parse('$BASE/plan/apply_recommendation'),
+    //     headers: {"Content-Type": "application/json"},
+    //     body: jsonEncode({
+    //       "selected_course": selectedCourse,
+    //       "quiz_level": quizLevel,
+    //       "quiz_details": quizDetails,
+    //     }),
+    //   );
+    //
+    // 서버 응답에서:
+    //  - Daily/Weekly/Monthly 플랜을 DB 저장
+    //  - 또는 바로 Flutter에 반환하여 홈 화면에 반영 가능
+    //
+    // 현재는 API 없이 로딩 후 홈 이동만 동작
+    // ======================================================================
 
     if (!mounted) return;
 
-    // 홈으로 스택 정리 후 이동(이전 화면들 제거)
+    // 홈으로 스택 정리 후 이동 (이전 화면 전체 삭제)
     Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
   }
 
@@ -69,7 +94,7 @@ class _RecommendLoadingScreenState extends State<RecommendLoadingScreen> {
     final percent = (progress * 100).clamp(0, 100).toStringAsFixed(0);
 
     return WillPopScope(
-      // 로딩 중 뒤로가기 방지(필요 시 false를 true로 변경)
+      // 로딩 중 뒤로가기 방지(필요하면 true로 변경 가능)
       onWillPop: () async => false,
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F8FD),

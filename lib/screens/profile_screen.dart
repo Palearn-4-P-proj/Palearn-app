@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+// 📌 백엔드 연동 시 필요한 import
+// import 'package:http/http.dart' as http;
+// import 'dart:convert';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -9,6 +12,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool loading = true;
+
+  // ▶ 서버에서 불러와야 할 실제 내 프로필 정보
   String name = 'John Smith';
   String userId = '25030024';
   String photoUrl =
@@ -20,23 +25,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadMyProfile();
   }
 
+  // =========================================================================
+  // 🟦 [중요] 프로필 불러오기 — FastAPI GET 필요
+  //
+  // GET /profile/me  또는  GET /profile/{user_id}
+  //
+  // 응답 예:
+  // {
+  //   "name": "한은진",
+  //   "user_id": "25030024",
+  //   "photo_url": "https://...",
+  // }
+  //
+  // Flutter 예:
+  // final res = await http.get(Uri.parse('$BASE/profile/me'),
+  //     headers: {"Authorization": "Bearer $token"});
+  // final data = json.decode(res.body);
+  //
+  // setState(() {
+  //   name = data["name"];
+  //   userId = data["user_id"];
+  //   photoUrl = data["photo_url"];
+  // });
+  //
+  // =========================================================================
   Future<void> _loadMyProfile() async {
-    // ##########################
-    // [DB 연동] 내 프로필 정보 조회
-    // 예)
-    // final me = await UserAPI.fetchMe();
-    // name = me.name; userId = me.code; photoUrl = me.photoUrl;
-    // ##########################
     await Future.delayed(const Duration(milliseconds: 200));
+
+    // TODO: 여기를 실제 GET API로 교체해야 함
+
     setState(() => loading = false);
   }
 
+  // =========================================================================
+  // 🟦 [중요] 로그아웃 — FastAPI POST 필요 (토큰 제거 or 세션 만료)
+  //
+  // POST /auth/logout
+  //
+  // Flutter 예:
+  // await http.post(Uri.parse('$BASE/auth/logout'),
+  //      headers: {"Authorization": "Bearer $token"});
+  //
+  // 그리고 local storage에서 토큰 삭제:
+  // await storage.delete(key: 'token');
+  //
+  // =========================================================================
   void _logout() async {
-    // ##########################
-    // [인증 연동] 로그아웃 처리
-    // await Auth.signOut();
-    // ##########################
+    // TODO: 서버 로그아웃 API 연동 필요
+
     if (!mounted) return;
+
+    // 클라이언트 이동 처리
     Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
   }
 
@@ -51,7 +90,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 헤더
+            // ─────────── 🔥 뒤로가기 버튼 포함 헤더 ───────────
             Container(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
               width: double.infinity,
@@ -59,13 +98,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: Color(0xFF7DB2FF),
                 borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
               ),
-              child: const Center(
-                child: Text('Profile',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+
+                  const Spacer(),
+
+                  const Text(
+                    'Profile',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  ),
+
+                  const Spacer(),
+
+                  // 오른쪽 더미 아이콘 (정렬용)
+                  Opacity(
+                    opacity: 0,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      onPressed: () {},
+                    ),
+                  ),
+                ],
               ),
             ),
 
-            // 프로필 카드
+            // ─────────── 프로필 카드 ───────────
             Expanded(
               child: Container(
                 width: double.infinity,
@@ -108,7 +170,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           'name': name,
                           'userId': userId,
                           'photoUrl': photoUrl,
-                          'openTab': 'settings', // 필요시 탭 구분
+                          'openTab': 'settings',
                         });
                       },
                     ),

@@ -27,15 +27,26 @@ class _FriendsScreenState extends State<FriendsScreen> {
   Future<void> _loadFriends() async {
     setState(() => _loading = true);
 
-    // ##############################
-    // [DB/API] 친구 목록 불러오기
-    // 예)
-    // final list = await FriendsAPI.fetchList(userId: me.id);
-    // setState(() => _friends = list);
-    // ##############################
-    await Future.delayed(const Duration(milliseconds: 300)); // demo delay
+    // ================================================================
+    // TODO(백엔드 연동 필요, GET):
+    // FastAPI에서 "친구 목록"을 가져와야 하는 부분.
+    //
+    // 예시:
+    // GET /friends
+    //
+    // 서버 응답 예:
+    // [
+    //   {"id": "u001", "name": "은진", "todayRate": 70, "avatarUrl": "..."},
+    //   {"id": "u002", "name": "예진", "todayRate": 50}
+    // ]
+    //
+    // 현재는 더미 대기 후 빈 리스트만 넣고 있음 → 실제 서비스에서는 반드시 GET으로 대체해야 함.
+    // ================================================================
+
+    await Future.delayed(const Duration(milliseconds: 300));
+
     setState(() {
-      _friends = []; // 초기엔 빈 목록 (실제에선 API 응답)
+      _friends = [];   // ← 실제 GET 결과 리스트로 변경 필요
       _loading = false;
     });
   }
@@ -46,29 +57,29 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
     setState(() => _adding = true);
 
-    // ##############################
-    // [DB/API] 친구 추가 (코드로)
-    // 예)
-    // final ok = await FriendsAPI.addByCode(myId: me.id, code: code);
-    // if (!mounted) return;
-    // if (ok) {
-    //   _codeCtrl.clear();
-    //   await _loadFriends();
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(content: Text('친구가 추가되었습니다.')),
-    //   );
-    // } else {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(content: Text('코드가 올바르지 않습니다.')),
-    //   );
+    // ================================================================
+    // TODO(백엔드 연동 필요, POST):
+    // 친구 코드를 입력하면 서버로 친구 추가 요청을 보내야 하는 부분.
+    //
+    // POST /friends/add
+    // body:
+    // {
+    //   "code": "입력한 친구 코드"
     // }
-    // ##############################
+    //
+    // - 서버는 code로 사용자를 조회하고 친구로 등록해줌
+    // - 성공 시 true/false 또는 친구 객체 반환
+    //
+    // 현재는 더미 대기 후 UI만 갱신함 → 실제 서비스에서는 반드시 POST 필요
+    // ================================================================
 
-    await Future.delayed(const Duration(milliseconds: 400)); // demo
+    await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
+
     _codeCtrl.clear();
     setState(() => _adding = false);
-    // 데모: 목록 새로고침
+
+    // 친구 추가 완료 후 목록 다시 불러오기 → GET
     await _loadFriends();
   }
 
@@ -92,11 +103,13 @@ class _FriendsScreenState extends State<FriendsScreen> {
       backgroundColor: const Color(0xFFF7F8FD),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _loadFriends,
+          onRefresh: _loadFriends, // ← 새로고침 시 GET 호출
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             children: [
-              // 헤더
+              const SizedBox(height: 8),
+
+              // 파란색 헤더
               Container(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
                 decoration: const BoxDecoration(
@@ -105,8 +118,19 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Text('친구',
-                        style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                    ),
+                    const SizedBox(width: 4),
+                    const Text(
+                      '친구',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                     const Spacer(),
                     IconButton(
                       onPressed: () => Navigator.pushNamed(context, '/notifications'),
@@ -115,9 +139,10 @@ class _FriendsScreenState extends State<FriendsScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
 
-              // 친구 추가
+              const SizedBox(height: 20),
+
+              // 친구 추가 박스
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -157,7 +182,8 @@ class _FriendsScreenState extends State<FriendsScreen> {
                             ),
                             child: _adding
                                 ? const SizedBox(
-                              width: 16, height: 16,
+                              width: 16,
+                              height: 16,
                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             )
                                 : const Text('추가', style: TextStyle(color: Colors.white)),
@@ -169,9 +195,9 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 ),
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
 
-              // 친구 목록
+              // 친구 목록 박스
               Container(
                 padding: const EdgeInsets.fromLTRB(18, 16, 18, 4),
                 decoration: BoxDecoration(
@@ -184,19 +210,26 @@ class _FriendsScreenState extends State<FriendsScreen> {
                     const Text('친구 목록',
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
                     const SizedBox(height: 8),
+
+                    // 로딩 상태
                     if (_loading)
                       const Padding(
                         padding: EdgeInsets.all(28.0),
                         child: Center(child: CircularProgressIndicator(color: Colors.white)),
                       )
+
+                    // 친구 없음
                     else if (_friends.isEmpty)
                       const Padding(
                         padding: EdgeInsets.all(28.0),
                         child: Text('등록된 친구가 없습니다.',
                             style: TextStyle(color: Colors.white70)),
                       )
+
+                    // 친구 목록
                     else
                       ..._friends.map((f) => _FriendTile(friend: f, onTap: () => _openDetail(f))),
+
                     const SizedBox(height: 8),
                   ],
                 ),
@@ -212,10 +245,10 @@ class _FriendsScreenState extends State<FriendsScreen> {
 // ===== 모델 & 타일 =====
 
 class FriendSummary {
-  final String id;         // 고유 id
-  final String name;       // 닉네임
-  final String? avatarUrl; // 프로필 이미지 (nullable)
-  final int todayRate;     // 오늘 달성률 (%)
+  final String id;
+  final String name;
+  final String? avatarUrl;
+  final int todayRate;
 
   FriendSummary({
     required this.id,

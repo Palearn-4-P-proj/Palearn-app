@@ -69,13 +69,6 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
       return;
     }
 
-    // ##########################
-    // [DB 저장/LLM 프롬프트 구성]
-    // 폼의 입력값을 서버로 보내어 임시 세션을 만들거나
-    // 다음 단계(퀴즈)의 컨텍스트를 준비하세요.
-    // ##########################
-
-    // → 로딩 화면으로 이동 (로딩 끝나면 퀴즈 시작)
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => LoadingPlanScreen(
         skill: selectedSkill!,
@@ -90,6 +83,17 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // ✅ 뒤로가기 AppBar 추가 ————
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      // ————————————————
+
       backgroundColor: const Color(0xFFF7F8FD),
       body: SafeArea(
         child: Column(

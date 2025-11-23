@@ -20,13 +20,49 @@ class ReviewScreen extends StatelessWidget {
                 color: Color(0xFF7DB2FF),
                 borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
               ),
-              child: const Text('어제 했던 것 복습',
-                  style: TextStyle(
-                      color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
+              child: Row(
+                children: [
+                  // 🔥 뒤로가기 버튼
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white),
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    '어제 했던 것 복습',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
 
-            // 카드 3개 (예시)
+            // ============================================================
+            // 🔵 [FastAPI GET 필요]
+            // 어제 학습한 리스트 불러오기
+            //
+            // 예시 FastAPI:
+            //   GET /review/yesterday?user_id=123
+            //
+            // 서버에서 반환하는 JSON 예시:
+            // [
+            //   { "type": "youtube", "title": "Sentdex neural network P.1" },
+            //   { "type": "book", "title": "딥러닝 전이학습" },
+            //   { "type": "blog", "title": "TF-IDF 실습" }
+            // ]
+            //
+            // Flutter에서는:
+            //   final items = await http.get(...);
+            //   화면에 표시
+            //
+            // 지금은 데모 데이터(하드코딩)로 표시 중
+            // ============================================================
+
             ...[
               _ReviewCard(
                 title: '유튜브',
@@ -44,6 +80,7 @@ class ReviewScreen extends StatelessWidget {
           ],
         ),
       ),
+
       // 바텀 네비 동일 노출
       bottomNavigationBar: Container(
         height: 84,
@@ -66,34 +103,39 @@ class ReviewScreen extends StatelessWidget {
   }
 }
 
+// ───────────────────────────────────────────
+// 🔹 Review Card Component
+// ───────────────────────────────────────────
 class _ReviewCard extends StatelessWidget {
-  const _ReviewCard({required this.title, required this.subtitle});
   final String title;
   final String subtitle;
+
+  const _ReviewCard({
+    required this.title,
+    required this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
+      margin: const EdgeInsets.only(bottom: 18),
       decoration: BoxDecoration(
         color: _blueLight,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style:
-              const TextStyle(color: _ink, fontSize: 18, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 10),
-          Text(subtitle, style: const TextStyle(color: _ink, fontSize: 15)),
-          const SizedBox(height: 12),
-          const Text('보러가기',
-              style: TextStyle(
-                  color: Color(0xFF6CB5FD),
-                  fontWeight: FontWeight.w600,
-                  decoration: TextDecoration.underline)),
+              style: const TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.w700, color: _ink)),
+          const SizedBox(height: 6),
+          Text(subtitle,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black87,
+              )),
         ],
       ),
     );

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'friends_screen.dart'; // FriendDetailArgs 재사용
+import 'friends_screen.dart';
 
 const _ink = Color(0xFF0E3E3E);
 const _blue = Color(0xFF7DB2FF);
@@ -19,7 +19,6 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
   DateTime _focused = DateTime.now();
   DateTime _selected = DateTime.now();
 
-  // 하루 계획 (체크박스)
   List<CheckItem> _dayItems = [];
 
   @override
@@ -32,17 +31,29 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
   Future<void> _loadDay(DateTime day) async {
     setState(() => _loading = true);
 
-    // ##############################
-    // [DB/API] 특정 날짜의 친구 계획 불러오기
-    // 예)
-    // final items = await FriendsAPI.fetchPlan(
-    //   friendId: _args.friendId, date: day,
-    // );
-    // setState(() => _dayItems = items);
-    // ##############################
+    // ================================================================
+    // TODO(백엔드 연동 필요, GET):
+    // FastAPI에서 친구의 날짜별 학습 계획을 받아와야 하는 부분.
+    //
+    // GET /friends/{friendId}/plans?date=yyyy-mm-dd
+    //
+    // - 달력에서 날짜를 클릭할 때마다 호출됨
+    // - 서버에서 해당 날짜의 계획 리스트를 JSON으로 받아와
+    //   CheckItem(id, title, done) 리스트로 변환해야 함
+    //
+    // ex 응답:
+    // [
+    //   {"id": "1", "title": "딥러닝 공부", "done": false},
+    //   {"id": "2", "title": "코딩테스트 1문제", "done": true}
+    // ]
+    //
+    // 현재는 더미로 빈 리스트 넣고 있음 → 실제 서비스에서는 반드시 GET 요청 필요
+    // ================================================================
+
     await Future.delayed(const Duration(milliseconds: 250));
+
     setState(() {
-      _dayItems = []; // 초기: 빈 목록 (실서비스에선 API 데이터)
+      _dayItems = [];   // ← 실제 FastAPI GET 결과 리스트로 대체되어야 함
       _loading = false;
     });
   }
@@ -50,12 +61,20 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
   Future<void> _toggleItem(CheckItem item, bool value) async {
     setState(() => item.done = value);
 
-    // ##############################
-    // [DB/API] 체크 상태 업데이트
-    // await FriendsAPI.updateCheck(
-    //   friendId: _args.friendId, planId: item.id, done: value,
-    // );
-    // ##############################
+    // ================================================================
+    // TODO(백엔드 연동 필요, POST 또는 PATCH):
+    // 체크박스를 변경할 때 그 변경 사항을 서버(FastAPI)에 저장해야 하는 부분.
+    //
+    // POST /friends/{friendId}/plans/check
+    // body:
+    // {
+    //   "planId": item.id,
+    //   "done": value
+    // }
+    //
+    // - 완료 여부를 서버 DB에 반영해야 데이터가 유지됨
+    // - 현재는 UI 상태만 변경 → 실제 서비스에서는 반드시 POST/PATCH 필요
+    // ================================================================
   }
 
   @override
@@ -63,11 +82,23 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
     final ym = '${_focused.year}년 ${_focused.month}월';
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          color: Colors.black87,
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+
       backgroundColor: const Color(0xFFF7F8FD),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
-            // 헤더
+            // 기존 커스텀 헤더
             Container(
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
               decoration: const BoxDecoration(
@@ -101,8 +132,11 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                 focusedDay: _focused,
                 selectedDayPredicate: (d) => isSameDay(d, _selected),
                 onDaySelected: (sel, foc) {
-                  setState(() { _selected = sel; _focused = foc; });
-                  _loadDay(sel);
+                  setState(() {
+                    _selected = sel;
+                    _focused = foc;
+                  });
+                  _loadDay(sel); // ← 날짜 클릭 시 GET API 호출 지점
                 },
                 headerStyle: HeaderStyle(
                   formatButtonVisible: false,
@@ -114,7 +148,6 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
 
             const Divider(height: 1),
 
-            // 오늘 계획 리스트
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
@@ -129,7 +162,7 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                     value: item.done,
                     controlAffinity: ListTileControlAffinity.trailing,
                     title: Text(item.title),
-                    onChanged: (v) => _toggleItem(item, v ?? false),
+                    onChanged: (v) => _toggleItem(item, v ?? false), // ← POST/PATCH 반영 지점
                   );
                 },
               ),

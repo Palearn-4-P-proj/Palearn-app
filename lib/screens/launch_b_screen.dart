@@ -7,6 +7,19 @@ class LaunchBScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+
+      // 🔥 추가된 AppBar — 디자인 깨지지 않도록 투명 + 뒤로가기
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      // ------------------------------------------
+
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(

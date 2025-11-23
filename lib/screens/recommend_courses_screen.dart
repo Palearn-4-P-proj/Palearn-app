@@ -11,7 +11,6 @@ class _RecommendCoursesScreenState extends State<RecommendCoursesScreen> {
   final _page = PageController(viewportFraction: 0.88);
   int _index = 0;
 
-  // 데모용 더미 데이터 (LLM/DB 연결 시 교체)
   List<Map<String, dynamic>> courses = [];
 
   @override
@@ -21,18 +20,24 @@ class _RecommendCoursesScreenState extends State<RecommendCoursesScreen> {
   }
 
   Future<void> _loadRecommendations() async {
-    // ##########################
-    // [LLM/DB 호출 지점]
-    // 퀴즈 결과(등급/정오표 등)를 서버/LLM으로 보내 여러 강좌 추천을 받아온다.
-    // 예)
-    // courses = await RecommendAPI.fetchCourses(level, detail);
-    // 각 item 예시 {
-    //   "title": "...", "provider":"...", "weeks":6, "free":true,
-    //   "summary":"...", "syllabus":[...], "id":"course_123"
-    // }
-    // ##########################
+
+    // =====================================================================
+    // 🔵 [FastAPI GET 필요]
+    // 사용자의 수준(level) 또는 퀴즈 결과를 기반으로 서버에서 추천 강좌 받아오기
+    //
+    // 예시 FastAPI:
+    //   GET /recommend/courses?level=초급
+    //
+    // Flutter 예시:
+    //   final res = await http.get(Uri.parse('$BASE/recommend/courses?level=$level'));
+    //   final data = jsonDecode(res.body);
+    //   courses = List<Map<String,dynamic>>.from(data);
+    //
+    // 현재는 DEMO 데이터 사용
+    // =====================================================================
 
     await Future.delayed(const Duration(milliseconds: 300));
+
     courses = [
       {
         "id": "c1",
@@ -41,7 +46,13 @@ class _RecommendCoursesScreenState extends State<RecommendCoursesScreen> {
         "weeks": 6,
         "free": true,
         "summary": "딥러닝을 활용하여 고급 이미지 처리 기법을 학습합니다.",
-        "syllabus": ["1강: 딥러닝 개요", "2강: CNN 이해", "3강: 분류 모델 구축", "4강: 전이학습", "5강: 세그멘테이션"],
+        "syllabus": [
+          "1강: 딥러닝 개요",
+          "2강: CNN 이해",
+          "3강: 분류 모델 구축",
+          "4강: 전이학습",
+          "5강: 세그멘테이션"
+        ],
       },
       {
         "id": "c2",
@@ -62,10 +73,34 @@ class _RecommendCoursesScreenState extends State<RecommendCoursesScreen> {
         "syllabus": ["1강: 함수", "2강: 미분", "3강: 적분", "4강: 확률", "5강: 통계 기초"],
       },
     ];
+
     setState(() {});
   }
 
   void _selectCourse(Map<String, dynamic> course) {
+
+    // =====================================================================
+    // 🔵 [FastAPI POST 필요 가능성]
+    // 사용자가 어떤 강좌를 선택했는지를 서버에 기록해야 할 수 있음 (선택 로그)
+    //
+    // 예시 FastAPI:
+    //   POST /recommend/select
+    //   body:
+    //   {
+    //     "user_id": "...",
+    //     "course_id": course["id"]
+    //   }
+    //
+    // Flutter 예시:
+    //   await http.post(
+    //     Uri.parse('$BASE/recommend/select'),
+    //     headers: {"Content-Type": "application/json"},
+    //     body: jsonEncode({"course_id": course["id"]}),
+    //   );
+    //
+    // 현재는 Navigator로 다음 화면 이동만 함
+    // =====================================================================
+
     Navigator.pushNamed(
       context,
       '/recommend_loading',
@@ -80,7 +115,7 @@ class _RecommendCoursesScreenState extends State<RecommendCoursesScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 상단 헤더
+            // ───────────── 헤더 + 뒤로가기 추가 ─────────────
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
@@ -88,15 +123,42 @@ class _RecommendCoursesScreenState extends State<RecommendCoursesScreen> {
                 color: Color(0xFF7DB2FF),
                 borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('🎯 추천 강좌', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                  SizedBox(height: 6),
-                  Text('당신의 수준에 맞는 강좌를 추천드려요!', style: TextStyle(color: Colors.white70)),
+                  // 🔙 뒤로가기 버튼
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const Spacer(),
+
+                      // 오른쪽 균형 맞추기용 더미
+                      Opacity(
+                        opacity: 0,
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                          onPressed: () {},
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+
+                  const Text('🎯 추천 강좌',
+                      style:
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  const Text('당신의 수준에 맞는 강좌를 추천드려요!',
+                      style: TextStyle(color: Colors.white70)),
                 ],
               ),
             ),
+            // ────────────────────────────────────────────────
+
             const SizedBox(height: 16),
 
             if (courses.isEmpty)
@@ -115,18 +177,20 @@ class _RecommendCoursesScreenState extends State<RecommendCoursesScreen> {
               ),
 
             const SizedBox(height: 12),
-            // 인디케이터
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 courses.length,
                     (i) => AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
+                  margin:
+                  const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
                   height: 6,
                   width: _index == i ? 20 : 8,
                   decoration: BoxDecoration(
-                    color: _index == i ? const Color(0xFF7DB2FF) : Colors.black12,
+                    color: _index == i
+                        ? const Color(0xFF7DB2FF)
+                        : Colors.black12,
                     borderRadius: BorderRadius.circular(6),
                   ),
                 ),
@@ -147,12 +211,12 @@ class _CourseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = data['title']?.toString() ?? '';
-    final provider = data['provider']?.toString() ?? '';
-    final weeks = data['weeks']?.toString() ?? '-';
+    final title = data['title'] ?? '';
+    final provider = data['provider'] ?? '';
+    final weeks = data['weeks'].toString();
     final free = (data['free'] ?? false) ? '무료' : '유료';
-    final summary = data['summary']?.toString() ?? '';
-    final syllabus = (data['syllabus'] as List?)?.cast<String>() ?? const [];
+    final summary = data['summary'] ?? '';
+    final syllabus = (data['syllabus'] as List?)?.cast<String>() ?? [];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
@@ -166,7 +230,8 @@ class _CourseCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+                style:
+                const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             Row(
               children: [
@@ -177,6 +242,8 @@ class _CourseCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(summary, style: const TextStyle(color: Colors.black87)),
             const SizedBox(height: 14),
+
+            // 강의 리스트 박스
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(16),
@@ -193,6 +260,7 @@ class _CourseCard extends StatelessWidget {
                 ),
               ),
             ),
+
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerRight,

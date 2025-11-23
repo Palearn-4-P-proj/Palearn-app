@@ -32,30 +32,52 @@ class _LoadingPlanScreenState extends State<LoadingPlanScreen> {
   void initState() {
     super.initState();
 
-    // ##########################
-    // [서버/LLM 준비 단계]
-    // - 폼에서 받은 값으로 임시 세션/초기 설정 생성
-    // - 퀴즈 문항 생성을 위한 컨텍스트 준비
-    // 예)
-    // await PlanAPI.createDraft(
+    // ======================================================================
+    // TODO(백엔드 연동 필요, POST):
+    // ⚡ "사용자가 입력한 학습 정보로 학습 계획 생성 요청"을 FastAPI에 보내는 단계
+    //
+    // 예시 엔드포인트:
+    // POST /plans/generate
+    //
+    // body:
+    // {
+    //   "skill": widget.skill,
+    //   "hourPerDay": widget.hour,
+    //   "startDate": widget.start.toIso8601String(),
+    //   "restDays": widget.restDays,
+    //   "selfLevel": widget.level
+    // }
+    //
+    // 서버 역할:
+    // - AI 모델 또는 규칙 기반 로직으로 학습 계획 생성
+    // - 생성 완료 후 /plans API로 사용자가 조회할 수 있도록 저장
+    //
+    // 현재는 실제 POST 요청이 없고, 아래 progress 타이머만 UI용으로 동작 중.
+    // 실제 서비스에서는 이 부분을 await로 처리한 뒤 다음 화면으로 이동해야 함.
+    // ======================================================================
+
+    // (실제 구현 예)
+    // await PlanAPI.createPlan(
     //   skill: widget.skill,
     //   hourPerDay: widget.hour,
     //   startDate: widget.start,
     //   restDays: widget.restDays,
-    //   selfLevel: widget.level,
+    //   level: widget.level,
     // );
-    // ##########################
 
-    // 간단한 더미 로딩 (UI용). 실제로는 위 비동기 완료 시점에 맞춰 이동하세요.
+    // UI용 더미 로딩 (POST 요청 완료 타이밍을 시뮬레이션)
     _timer = Timer.periodic(const Duration(milliseconds: 50), (t) {
       setState(() => progress = (progress + 0.01).clamp(0.0, 1.0));
       if (progress >= 1.0) {
         t.cancel();
 
-        // ##########################
-        // [다음 단계로 이동]
-        // 준비가 끝났다면 퀴즈 시작 화면으로 이동합니다.
-        // ##########################
+        // ======================================================================
+        // TODO(백엔드 연동 필요 없음):
+        // 단순히 학습 계획 생성이 완료되면 퀴즈 화면으로 이동하는 기능입니다.
+        //
+        // 서버 요청은 위 POST에서 이미 처리됨.
+        // ======================================================================
+
         if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/quiz');
       }
@@ -76,7 +98,7 @@ class _LoadingPlanScreenState extends State<LoadingPlanScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 상단 흐린 헤더
+            // 상단 헤더
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -93,8 +115,6 @@ class _LoadingPlanScreenState extends State<LoadingPlanScreen> {
               ),
               child: Row(
                 children: const [
-                  // 뒤로가기는 로딩 단계에선 막아두는 걸 권장 (실수 방지)
-                  // 필요하면 GestureDetector로 교체해서 Navigator.pop 사용
                   Icon(Icons.menu_book_rounded, color: _ink, size: 18),
                   SizedBox(width: 6),
                   Text(
@@ -107,7 +127,7 @@ class _LoadingPlanScreenState extends State<LoadingPlanScreen> {
 
             const Spacer(),
 
-            // 프로그레스 바
+            // 진행바
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: ClipRRect(
