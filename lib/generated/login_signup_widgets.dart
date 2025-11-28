@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/api_service.dart';
 
 /// 공통 컬러
 const _blue = Color(0xFF7DB2FF);
@@ -8,7 +9,7 @@ const _ink = Color(0xFF093030);
 /// ==============================
 /// Login
 /// ==============================
-class LoginWidget extends StatelessWidget {
+class LoginWidget extends StatefulWidget {
   const LoginWidget({
     super.key,
     this.onTapSignUpText,
@@ -19,164 +20,72 @@ class LoginWidget extends StatelessWidget {
   final VoidCallback? onTapLogin;
 
   @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
-    return SizedBox(
-      width: double.infinity,
-      height: size.height,
-      child: Stack(
-        children: [
-          // 상단 하늘색 헤더 (아치)
-          SizedBox(
-            width: double.infinity,
-            height: size.height,
-            child: ClipPath(
-              clipper: _BottomArcClipper(),
-              child: Container(color: _blue),
-            ),
-          ),
-
-          // 흰 카드(모서리 40)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            top: size.height * 0.18, // 아치가 보이도록 상단 여백
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(40),
-                boxShadow: [
-                  BoxShadow(
-                    blurRadius: 16,
-                    color: Colors.black.withOpacity(0.06),
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: _LoginForm(onTapLogin: onTapLogin),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  State<LoginWidget> createState() => _LoginWidgetState();
 }
 
-class _LoginForm extends StatelessWidget {
-  const _LoginForm({this.onTapLogin});
-  final VoidCallback? onTapLogin;
+class _LoginWidgetState extends State<LoginWidget> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Center(
-            child: Text(
-              'Welcome',
-              style: TextStyle(
-                color: _ink,
-                fontSize: 30,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(height: 28),
-
-          const Text('아이디',
-              style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 8),
-          const _RoundedField(hint: 'example@example.com'),
-
-          const SizedBox(height: 20),
-          const Text('비밀번호',
-              style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 8),
-          _RoundedField(
-            hint: '••••••••',
-            obscure: true,
-            trailing: Icon(Icons.visibility_off, size: 20, color: _ink.withOpacity(.7)),
-          ),
-
-          const SizedBox(height: 24),
-          _PrimaryButton(text: 'Log In', onTap: onTapLogin), // ✅ 콜백 연결
-          const SizedBox(height: 10),
-
-          const Align(
-            alignment: Alignment.center,
-            child: Text(
-              'Forgot Password?',
-              style: TextStyle(
-                color: _ink,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-          _SecondaryButton(
-            text: 'Sign Up',
-            onTap: () => Navigator.pushReplacementNamed(context, '/signup'),
-          ),
-          const SizedBox(height: 16),
-
-          const Center(
-            child: Text('or sign up with',
-                style: TextStyle(color: _ink, fontSize: 12)),
-          ),
-          const SizedBox(height: 16),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              _CircleIcon(label: 'N'),
-              SizedBox(width: 24),
-              _CircleIcon(label: 'G'),
-            ],
-          ),
-
-          const Spacer(),
-
-          GestureDetector(
-            onTap: () {
-              final state = context.findAncestorWidgetOfExactType<LoginWidget>();
-              if (state?.onTapSignUpText != null) state!.onTapSignUpText!();
-            },
-            child: const Center(
-              child: Text.rich(
-                TextSpan(
-                  text: "Don't have an account? ",
-                  style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.w300),
-                  children: [
-                    TextSpan(
-                      text: 'Sign Up',
-                      style: TextStyle(
-                        color: Color(0xFF6CB5FD),
-                        fontWeight: FontWeight.w300,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
-}
 
-/// ==============================
-/// Sign Up (Create Account)
-/// ==============================
-class CreateAccountWidget extends StatelessWidget {
-  const CreateAccountWidget({super.key, this.onTapBackToLogin});
-  final VoidCallback? onTapBackToLogin;
+  /// 비밀번호 유효성 검사: 6자 이상, 대문자 1개 이상, 소문자 1개 이상
+  String? _validatePassword(String password) {
+    if (password.length < 6) {
+      return '비밀번호는 6자 이상이어야 합니다';
+    }
+    if (!password.contains(RegExp(r'[A-Z]'))) {
+      return '비밀번호에 대문자가 1개 이상 포함되어야 합니다';
+    }
+    if (!password.contains(RegExp(r'[a-z]'))) {
+      return '비밀번호에 소문자가 1개 이상 포함되어야 합니다';
+    }
+    return null;
+  }
+
+  Future<void> _handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('이메일과 비밀번호를 입력하세요')),
+      );
+      return;
+    }
+
+    // 비밀번호 유효성 검사
+    final passwordError = _validatePassword(password);
+    if (passwordError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(passwordError)),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await AuthService.login(email: email, password: password);
+      if (result['success'] == true && mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('로그인 실패: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -195,7 +104,6 @@ class CreateAccountWidget extends StatelessWidget {
               child: Container(color: _blue),
             ),
           ),
-
           Positioned(
             left: 0,
             right: 0,
@@ -213,7 +121,94 @@ class CreateAccountWidget extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const _SignUpForm(),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Center(
+                      child: Text(
+                        'Welcome',
+                        style: TextStyle(
+                          color: _ink,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+
+                    const Text('아이디',
+                        style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    _RoundedField(
+                      hint: 'example@example.com',
+                      controller: _emailController,
+                    ),
+
+                    const SizedBox(height: 20),
+                    const Text('비밀번호',
+                        style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    _RoundedField(
+                      hint: '••••••••',
+                      obscure: true,
+                      controller: _passwordController,
+                      trailing: Icon(Icons.visibility_off, size: 20, color: _ink.withOpacity(.7)),
+                    ),
+
+                    const SizedBox(height: 24),
+                    _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _PrimaryButton(text: 'Log In', onTap: _handleLogin),
+
+                    const SizedBox(height: 16),
+                    _SecondaryButton(
+                      text: 'Sign Up',
+                      onTap: () => Navigator.pushReplacementNamed(context, '/signup'),
+                    ),
+                    const SizedBox(height: 16),
+
+                    const Center(
+                      child: Text('or sign up with',
+                          style: TextStyle(color: _ink, fontSize: 12)),
+                    ),
+                    const SizedBox(height: 16),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        _CircleIcon(label: 'N'),
+                        SizedBox(width: 24),
+                        _CircleIcon(label: 'G'),
+                      ],
+                    ),
+
+                    const Spacer(),
+
+                    GestureDetector(
+                      onTap: widget.onTapSignUpText,
+                      child: const Center(
+                        child: Text.rich(
+                          TextSpan(
+                            text: "Don't have an account? ",
+                            style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.w300),
+                            children: [
+                              TextSpan(
+                                text: 'Sign Up',
+                                style: TextStyle(
+                                  color: Color(0xFF6CB5FD),
+                                  fontWeight: FontWeight.w300,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -222,77 +217,207 @@ class CreateAccountWidget extends StatelessWidget {
   }
 }
 
-class _SignUpForm extends StatelessWidget {
-  const _SignUpForm();
+/// ==============================
+/// Sign Up (Create Account)
+/// ==============================
+class CreateAccountWidget extends StatefulWidget {
+  const CreateAccountWidget({super.key, this.onTapBackToLogin});
+  final VoidCallback? onTapBackToLogin;
+
+  @override
+  State<CreateAccountWidget> createState() => _CreateAccountWidgetState();
+}
+
+class _CreateAccountWidgetState extends State<CreateAccountWidget> {
+  final _emailController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _password2Controller = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _nameController.dispose();
+    _passwordController.dispose();
+    _password2Controller.dispose();
+    super.dispose();
+  }
+
+  /// 비밀번호 유효성 검사: 6자 이상, 대문자 1개 이상, 소문자 1개 이상
+  String? _validatePassword(String password) {
+    if (password.length < 6) {
+      return '비밀번호는 6자 이상이어야 합니다';
+    }
+    if (!password.contains(RegExp(r'[A-Z]'))) {
+      return '비밀번호에 대문자가 1개 이상 포함되어야 합니다';
+    }
+    if (!password.contains(RegExp(r'[a-z]'))) {
+      return '비밀번호에 소문자가 1개 이상 포함되어야 합니다';
+    }
+    return null;
+  }
+
+  Future<void> _handleSignUp() async {
+    final email = _emailController.text.trim();
+    final name = _nameController.text.trim();
+    final password = _passwordController.text;
+    final password2 = _password2Controller.text;
+
+    if (email.isEmpty || name.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('모든 필드를 입력하세요')),
+      );
+      return;
+    }
+
+    // 비밀번호 유효성 검사
+    final passwordError = _validatePassword(password);
+    if (passwordError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(passwordError)),
+      );
+      return;
+    }
+
+    if (password != password2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('비밀번호가 일치하지 않습니다')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await AuthService.signup(
+        username: email.split('@').first,
+        email: email,
+        password: password,
+        name: name,
+        birth: '2000-01-01',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('회원가입 성공! 로그인해주세요.')),
+        );
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('회원가입 실패: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    final size = MediaQuery.of(context).size;
+
+    return SizedBox(
+      width: double.infinity,
+      height: size.height,
+      child: Stack(
         children: [
-          const Center(
-            child: Text(
-              'Create Account',
-              style: TextStyle(
-                color: _ink,
-                fontSize: 30,
-                fontWeight: FontWeight.w600,
-              ),
+          SizedBox(
+            width: double.infinity,
+            height: size.height,
+            child: ClipPath(
+              clipper: _BottomArcClipper(),
+              child: Container(color: _blue),
             ),
           ),
-          const SizedBox(height: 28),
-
-          const Text('이메일',
-              style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 8),
-          const _RoundedField(hint: 'example@example.com'),
-
-          const SizedBox(height: 16),
-          const Text('이름',
-              style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 8),
-          const _RoundedField(hint: '홍길동'),
-
-          const SizedBox(height: 16),
-          const Text('비밀번호',
-              style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 8),
-          const _RoundedField(hint: '••••••••', obscure: true),
-
-          const SizedBox(height: 16),
-          const Text('비밀번호 확인',
-              style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 8),
-          const _RoundedField(hint: '••••••••', obscure: true),
-
-          const SizedBox(height: 24),
-          // 회원가입 버튼 — 일단 홈으로 이동 (원하면 /login 등으로 변경)
-          _PrimaryButton(
-            text: 'Sign Up',
-            onTap: () => Navigator.pushReplacementNamed(context, '/home'),
-          ),
-
-          const Spacer(),
-          GestureDetector(
-            onTap: () {
-              final state =
-              context.findAncestorWidgetOfExactType<CreateAccountWidget>();
-              if (state?.onTapBackToLogin != null) state!.onTapBackToLogin!();
-            },
-            child: const Center(
-              child: Text.rich(
-                TextSpan(
-                  text: 'Already have an account?  ',
-                  style:
-                  TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.w300),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            top: size.height * 0.18,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(40),
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: 16,
+                    color: Colors.black.withOpacity(0.06),
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    TextSpan(
-                      text: 'Log In',
-                      style: TextStyle(
-                        color: Color(0xFF6CB5FD),
-                        fontWeight: FontWeight.w300,
+                    const Center(
+                      child: Text(
+                        'Create Account',
+                        style: TextStyle(
+                          color: _ink,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+
+                    const Text('이메일',
+                        style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    _RoundedField(hint: 'example@example.com', controller: _emailController),
+
+                    const SizedBox(height: 16),
+                    const Text('이름',
+                        style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    _RoundedField(hint: '홍길동', controller: _nameController),
+
+                    const SizedBox(height: 16),
+                    const Text('비밀번호',
+                        style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 4),
+                    const Text(
+                      '6자 이상, 대문자·소문자 각 1개 이상 포함',
+                      style: TextStyle(color: Color(0x80093030), fontSize: 12),
+                    ),
+                    const SizedBox(height: 8),
+                    _RoundedField(hint: '••••••••', obscure: true, controller: _passwordController),
+
+                    const SizedBox(height: 16),
+                    const Text('비밀번호 확인',
+                        style: TextStyle(color: _ink, fontSize: 15, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    _RoundedField(hint: '••••••••', obscure: true, controller: _password2Controller),
+
+                    const SizedBox(height: 24),
+                    _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _PrimaryButton(text: 'Sign Up', onTap: _handleSignUp),
+
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: widget.onTapBackToLogin ?? () => Navigator.pushReplacementNamed(context, '/login'),
+                      child: const Center(
+                        child: Text.rich(
+                          TextSpan(
+                            text: 'Already have an account?  ',
+                            style: TextStyle(color: _ink, fontSize: 13, fontWeight: FontWeight.w300),
+                            children: [
+                              TextSpan(
+                                text: 'Log In',
+                                style: TextStyle(
+                                  color: Color(0xFF6CB5FD),
+                                  fontWeight: FontWeight.w300,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -310,10 +435,11 @@ class _SignUpForm extends StatelessWidget {
 /// 공용 작은 위젯들
 /// ==============================
 class _RoundedField extends StatelessWidget {
-  const _RoundedField({this.hint, this.obscure = false, this.trailing});
+  const _RoundedField({this.hint, this.obscure = false, this.trailing, this.controller});
   final String? hint;
   final bool obscure;
   final Widget? trailing;
+  final TextEditingController? controller;
 
   @override
   Widget build(BuildContext context) {
@@ -328,6 +454,7 @@ class _RoundedField extends StatelessWidget {
         children: [
           Expanded(
             child: TextField(
+              controller: controller,
               obscureText: obscure,
               decoration: InputDecoration(
                 hintText: hint,
@@ -363,7 +490,7 @@ class _PrimaryButton extends StatelessWidget {
     return SizedBox(
       height: 46,
       child: FilledButton(
-        onPressed: onTap, // ✅ 자기 필드 사용
+        onPressed: onTap,
         style: FilledButton.styleFrom(
           backgroundColor: _blue,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
@@ -391,7 +518,7 @@ class _SecondaryButton extends StatelessWidget {
     return SizedBox(
       height: 46,
       child: FilledButton(
-        onPressed: onTap, // ✅ 자기 필드 사용
+        onPressed: onTap,
         style: FilledButton.styleFrom(
           backgroundColor: _blueLight,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),

@@ -311,8 +311,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       hintText: hint,
       filled: true,
       fillColor: const Color(0xFFD6E6FA),
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide.none,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
       contentPadding:
       const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     );

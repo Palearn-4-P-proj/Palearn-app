@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'friends_screen.dart';
+import '../data/api_service.dart';
 
 const _ink = Color(0xFF0E3E3E);
 const _blue = Color(0xFF7DB2FF);
@@ -31,50 +32,49 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
   Future<void> _loadDay(DateTime day) async {
     setState(() => _loading = true);
 
-    // ================================================================
-    // TODO(백엔드 연동 필요, GET):
-    // FastAPI에서 친구의 날짜별 학습 계획을 받아와야 하는 부분.
-    //
-    // GET /friends/{friendId}/plans?date=yyyy-mm-dd
-    //
-    // - 달력에서 날짜를 클릭할 때마다 호출됨
-    // - 서버에서 해당 날짜의 계획 리스트를 JSON으로 받아와
-    //   CheckItem(id, title, done) 리스트로 변환해야 함
-    //
-    // ex 응답:
-    // [
-    //   {"id": "1", "title": "딥러닝 공부", "done": false},
-    //   {"id": "2", "title": "코딩테스트 1문제", "done": true}
-    // ]
-    //
-    // 현재는 더미로 빈 리스트 넣고 있음 → 실제 서비스에서는 반드시 GET 요청 필요
-    // ================================================================
+    try {
+      final dateStr = '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+      final data = await FriendsService.getFriendPlans(
+        friendId: _args.friendId,
+        date: dateStr,
+      );
 
-    await Future.delayed(const Duration(milliseconds: 250));
-
-    setState(() {
-      _dayItems = [];   // ← 실제 FastAPI GET 결과 리스트로 대체되어야 함
-      _loading = false;
-    });
+      if (mounted) {
+        setState(() {
+          _dayItems = data.map((item) => CheckItem(
+            id: item['id']?.toString() ?? '',
+            title: item['title']?.toString() ?? '',
+            done: item['done'] == true,
+          )).toList();
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading friend plans: $e');
+      if (mounted) {
+        setState(() {
+          _dayItems = [];
+          _loading = false;
+        });
+      }
+    }
   }
 
   Future<void> _toggleItem(CheckItem item, bool value) async {
     setState(() => item.done = value);
 
-    // ================================================================
-    // TODO(백엔드 연동 필요, POST 또는 PATCH):
-    // 체크박스를 변경할 때 그 변경 사항을 서버(FastAPI)에 저장해야 하는 부분.
-    //
-    // POST /friends/{friendId}/plans/check
-    // body:
-    // {
-    //   "planId": item.id,
-    //   "done": value
-    // }
-    //
-    // - 완료 여부를 서버 DB에 반영해야 데이터가 유지됨
-    // - 현재는 UI 상태만 변경 → 실제 서비스에서는 반드시 POST/PATCH 필요
-    // ================================================================
+    try {
+      await FriendsService.checkFriendPlan(
+        friendId: _args.friendId,
+        planId: item.id,
+        done: value,
+      );
+    } catch (e) {
+      debugPrint('Error updating friend plan: $e');
+      if (mounted) {
+        setState(() => item.done = !value);
+      }
+    }
   }
 
   @override

@@ -1,47 +1,31 @@
-// lib/data/api_quiz_repository.dart
-
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+// lib/data/quiz_repository_mock.dart
 
 import 'quiz_repository.dart';
 
-/// FastAPI와 직접 통신하는 실제 Repository
-/// UI 코드(HomeScreen, QuizScreen 등)는 이 Repository만 바꿔 끼우면 그대로 동작함.
-///
-/// ⚠️ 본 파일에서 반드시 다뤄야 하는 두 가지 주요 API:
-///   1) GET /quiz/items   → 문제 목록 가져오기
-///   2) POST /quiz/grade  → 사용자가 제출한 답안 채점
-///
-/// 아래 코드에는 실제 통신이 필요한 지점을 TODO로 명확하게 표시해둠.
-class APIQuizRepository implements QuizRepository {
-  /// FastAPI 서버 주소
-  final String baseUrl = "http://YOUR_FASTAPI_SERVER_ADDRESS";
-
+/// 로컬 테스트용 Mock Repository
+/// 서버 연동 전 UI 테스트에 사용
+class MockQuizRepository implements QuizRepository {
   @override
   Future<List<QuizItem>> fetchQuizItems() async {
-    // ================================================================
-    // TODO: GET /quiz/items
-    //
-    // FastAPI로부터 문제 목록을 받아오는 HTTP GET 요청이 필요함.
-    // 백엔드는 JSON 배열 형태로 문제 리스트를 반환해야 함.
-    // 예:
-    // [
-    //   { "id": 1, "type": "OX", "question": "...", "options": [], "answerKey": "O" },
-    //   { "id": 2, "type": "MULTI", "question": "...", "options": ["a","b"], "answerKey": "a" }
-    // ]
-    //
-    // Flutter는 응답 JSON을 받아 QuizItem.fromMap으로 변환함.
-    // ================================================================
+    // 테스트용 더미 데이터
+    await Future.delayed(const Duration(milliseconds: 500));
 
-    final url = Uri.parse('$baseUrl/quiz/items');
-    final response = await http.get(url);
-
-    if (response.statusCode != 200) {
-      throw Exception('문제 가져오기 실패');
-    }
-
-    final List<dynamic> data = jsonDecode(response.body);
-    return data.map((e) => QuizItem.fromMap(e)).toList();
+    return [
+      QuizItem(id: 1, type: 'OX', question: 'Python은 인터프리터 언어이다.', answerKey: 'O'),
+      QuizItem(id: 2, type: 'OX', question: 'Java는 컴파일 언어이다.', answerKey: 'O'),
+      QuizItem(id: 3, type: 'MULTI', question: '다음 중 프로그래밍 언어가 아닌 것은?',
+               options: ['Python', 'Java', 'HTML', 'C++'], answerKey: 'HTML'),
+      QuizItem(id: 4, type: 'MULTI', question: '리스트의 첫 번째 요소 인덱스는?',
+               options: ['0', '1', '-1', 'None'], answerKey: '0'),
+      QuizItem(id: 5, type: 'SHORT', question: 'print("Hello")의 출력 결과는?', answerKey: 'Hello'),
+      QuizItem(id: 6, type: 'OX', question: 'Flutter는 Google이 만들었다.', answerKey: 'O'),
+      QuizItem(id: 7, type: 'MULTI', question: 'Flutter에서 UI 구성 요소를 무엇이라 하는가?',
+               options: ['Component', 'Widget', 'Element', 'View'], answerKey: 'Widget'),
+      QuizItem(id: 8, type: 'OX', question: 'Dart는 정적 타입 언어이다.', answerKey: 'O'),
+      QuizItem(id: 9, type: 'SHORT', question: '1 + 1 = ?', answerKey: '2'),
+      QuizItem(id: 10, type: 'MULTI', question: '다음 중 Flutter의 상태관리 방법이 아닌 것은?',
+               options: ['Provider', 'Redux', 'GetX', 'Django'], answerKey: 'Django'),
+    ];
   }
 
   @override
@@ -49,58 +33,21 @@ class APIQuizRepository implements QuizRepository {
     required List<QuizItem> items,
     required List<String?> userAnswers,
   }) async {
+    await Future.delayed(const Duration(milliseconds: 300));
 
-    // 사용자가 제출한 답안 리스트 생성
-    final payload = {
-      "answers": [
-        for (int i = 0; i < items.length; i++)
-          {
-            "id": items[i].id,
-            "userAnswer": userAnswers[i] ?? ""
-          }
-      ]
-    };
+    int correct = 0;
+    List<bool> detail = [];
 
-    // ========================================================================
-    // TODO: POST /quiz/grade
-    //
-    // FastAPI로 사용자 답안을 보내 채점을 요청해야 함.
-    // 전송 데이터(JSON):
-    // {
-    //   "answers": [
-    //     { "id": 1, "userAnswer": "O" },
-    //     { "id": 2, "userAnswer": "월요일" },
-    //     ...
-    //   ]
-    // }
-    //
-    // FastAPI는 다음 형태의 JSON을 반환해야 함:
-    // {
-    //   "total": 10,
-    //   "correct": 7,
-    //   "detail": [true, false, ...]
-    // }
-    //
-    // 이 응답을 QuizResult 객체로 변환해 UI로 전달.
-    // ========================================================================
-
-    final url = Uri.parse('$baseUrl/quiz/grade');
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode(payload),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('채점 요청 실패');
+    for (int i = 0; i < items.length; i++) {
+      final isCorrect = userAnswers[i]?.toLowerCase() == items[i].answerKey?.toLowerCase();
+      detail.add(isCorrect);
+      if (isCorrect) correct++;
     }
 
-    final Map<String, dynamic> result = jsonDecode(response.body);
-
     return QuizResult(
-      total: result['total'] as int,
-      correct: result['correct'] as int,
-      detail: List<bool>.from(result['detail']),
+      total: items.length,
+      correct: correct,
+      detail: detail,
     );
   }
 }

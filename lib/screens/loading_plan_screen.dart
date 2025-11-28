@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../data/api_service.dart';
 
 const _ink = Color(0xFF0E3E3E);
 const _blue = Color(0xFF7DB2FF);
@@ -31,57 +32,51 @@ class _LoadingPlanScreenState extends State<LoadingPlanScreen> {
   @override
   void initState() {
     super.initState();
+    _generatePlan();
+  }
 
-    // ======================================================================
-    // TODO(백엔드 연동 필요, POST):
-    // ⚡ "사용자가 입력한 학습 정보로 학습 계획 생성 요청"을 FastAPI에 보내는 단계
-    //
-    // 예시 엔드포인트:
-    // POST /plans/generate
-    //
-    // body:
-    // {
-    //   "skill": widget.skill,
-    //   "hourPerDay": widget.hour,
-    //   "startDate": widget.start.toIso8601String(),
-    //   "restDays": widget.restDays,
-    //   "selfLevel": widget.level
-    // }
-    //
-    // 서버 역할:
-    // - AI 모델 또는 규칙 기반 로직으로 학습 계획 생성
-    // - 생성 완료 후 /plans API로 사용자가 조회할 수 있도록 저장
-    //
-    // 현재는 실제 POST 요청이 없고, 아래 progress 타이머만 UI용으로 동작 중.
-    // 실제 서비스에서는 이 부분을 await로 처리한 뒤 다음 화면으로 이동해야 함.
-    // ======================================================================
-
-    // (실제 구현 예)
-    // await PlanAPI.createPlan(
-    //   skill: widget.skill,
-    //   hourPerDay: widget.hour,
-    //   startDate: widget.start,
-    //   restDays: widget.restDays,
-    //   level: widget.level,
-    // );
-
-    // UI용 더미 로딩 (POST 요청 완료 타이밍을 시뮬레이션)
+  Future<void> _generatePlan() async {
     _timer = Timer.periodic(const Duration(milliseconds: 50), (t) {
-      setState(() => progress = (progress + 0.01).clamp(0.0, 1.0));
-      if (progress >= 1.0) {
-        t.cancel();
-
-        // ======================================================================
-        // TODO(백엔드 연동 필요 없음):
-        // 단순히 학습 계획 생성이 완료되면 퀴즈 화면으로 이동하는 기능입니다.
-        //
-        // 서버 요청은 위 POST에서 이미 처리됨.
-        // ======================================================================
-
-        if (!mounted) return;
-        Navigator.pushReplacementNamed(context, '/quiz');
+      if (mounted) {
+        setState(() => progress = (progress + 0.005).clamp(0.0, 0.9));
       }
     });
+
+    try {
+      await PlanService.generatePlan(
+        skill: widget.skill,
+        hourPerDay: double.tryParse(widget.hour) ?? 1.0,
+        startDate: widget.start.toIso8601String(),
+        restDays: widget.restDays,
+        selfLevel: widget.level,
+      );
+
+      _timer?.cancel();
+      if (!mounted) return;
+      setState(() => progress = 1.0);
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(
+        context,
+        '/quiz',
+        arguments: {'skill': widget.skill, 'level': widget.level},
+      );
+    } catch (e) {
+      debugPrint('Error generating plan: $e');
+      _timer?.cancel();
+      if (!mounted) return;
+      setState(() => progress = 1.0);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('계획 생성 실패: $e')),
+      );
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(
+        context,
+        '/quiz',
+        arguments: {'skill': widget.skill, 'level': widget.level},
+      );
+    }
   }
 
   @override

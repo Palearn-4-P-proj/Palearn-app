@@ -29,6 +29,12 @@ import 'screens/profile_edit_screen.dart';
 // ── 알림 화면 ────────────────────────────────────────────────
 import 'screens/notifications_screen.dart'; // ✅ 반드시 추가
 
+// ── 계획 상세 화면 ────────────────────────────────────────────
+import 'screens/plan_detail_screen.dart';
+
+// ── 복습 화면 ────────────────────────────────────────────────
+import 'screens/review_screen.dart';
+
 void main() => runApp(const AppRoot());
 
 class AppRoot extends StatelessWidget {
@@ -85,6 +91,12 @@ class AppRoot extends StatelessWidget {
 
         // ── 알림 플로우 ──
         '/notifications': (_) => const NotificationScreen(),
+
+        // ── 계획 상세 ──
+        '/plan_detail': (_) => const PlanDetailScreen(),
+
+        // ── 복습 화면 ──
+        '/review': (_) => const ReviewScreen(),
       },
     );
   }

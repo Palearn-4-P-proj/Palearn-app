@@ -7,6 +7,7 @@ class QuizItem {
   final String question;
   final List<String> options; // MULTI 전용
   final String? answerKey;    // 정답(있다면)
+  final String? explanation;  // 해설 (왜 정답인지/오답인지)
 
   QuizItem({
     required this.id,
@@ -14,6 +15,7 @@ class QuizItem {
     required this.question,
     this.options = const [],
     this.answerKey,
+    this.explanation,
   });
 
   factory QuizItem.fromMap(Map<String, dynamic> m) => QuizItem(
@@ -24,6 +26,7 @@ class QuizItem {
     (m['options'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
         const [],
     answerKey: m['answerKey']?.toString(),
+    explanation: m['explanation']?.toString(),
   );
 }
 

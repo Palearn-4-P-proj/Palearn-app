@@ -1,6 +1,7 @@
 // lib/screens/recommend_loading_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../data/api_service.dart';
 
 const _ink = Color(0xFF0E3E3E);
 
@@ -17,27 +18,58 @@ class _RecommendLoadingScreenState extends State<RecommendLoadingScreen> {
 
   // 선택한 강좌(있다면)
   Map<String, dynamic>? selectedCourse;
+  String _skill = 'general';
+  String _level = '초급';
 
   @override
   void initState() {
     super.initState();
 
-    // arguments는 build 이후 안전하게 접근
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args is Map) {
         selectedCourse = Map<String, dynamic>.from(args['selectedCourse'] ?? {});
+        _skill = args['skill']?.toString() ?? 'general';
+        _level = args['level']?.toString() ?? '초급';
+      }
+      _applyRecommendation();
+    });
+  }
+
+  Future<void> _applyRecommendation() async {
+    _timer = Timer.periodic(const Duration(milliseconds: 50), (t) {
+      if (mounted) {
+        setState(() => progress = (progress + 0.005).clamp(0.0, 0.9));
       }
     });
 
-    // 로딩 UI (실제론 API 완료 타이밍에 맞춰 이동)
-    _timer = Timer.periodic(const Duration(milliseconds: 50), (t) {
-      setState(() => progress = (progress + 0.01).clamp(0.0, 1.0));
-      if (progress >= 1.0) {
-        t.cancel();
-        _applyRecommendationAndGoHome();
+    try {
+      if (selectedCourse != null) {
+        await RecommendService.applyRecommendation(
+          selectedCourse: selectedCourse!,
+          quizLevel: _level,
+          skill: _skill,
+          hourPerDay: 1.0,
+          startDate: DateTime.now().toIso8601String(),
+          restDays: [],
+        );
       }
-    });
+
+      _timer?.cancel();
+      if (!mounted) return;
+      setState(() => progress = 1.0);
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+    } catch (e) {
+      debugPrint('Error applying recommendation: $e');
+      _timer?.cancel();
+      if (!mounted) return;
+      setState(() => progress = 1.0);
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+    }
   }
 
   @override
@@ -46,48 +78,6 @@ class _RecommendLoadingScreenState extends State<RecommendLoadingScreen> {
     super.dispose();
   }
 
-  Future<void> _applyRecommendationAndGoHome() async {
-
-    // ======================================================================
-    // 🔵 [FastAPI POST 필요 — 추천 기반 학습 계획 생성 API]
-    //
-    // 사용자의 퀴즈 결과 + 선택한 강좌 + 기존 학습 계획 여부를 기반으로,
-    // 서버에서 Daily / Weekly / Monthly 학습 계획을 자동 생성.
-    //
-    // 예시 FastAPI:
-    //   POST /plan/apply_recommendation
-    //
-    // body 예시:
-    // {
-    //   "user_id": "...",
-    //   "selected_course": selectedCourse,
-    //   "quiz_level": "...",
-    //   "quiz_details": [...],
-    // }
-    //
-    // Flutter 예시:
-    //   await http.post(
-    //     Uri.parse('$BASE/plan/apply_recommendation'),
-    //     headers: {"Content-Type": "application/json"},
-    //     body: jsonEncode({
-    //       "selected_course": selectedCourse,
-    //       "quiz_level": quizLevel,
-    //       "quiz_details": quizDetails,
-    //     }),
-    //   );
-    //
-    // 서버 응답에서:
-    //  - Daily/Weekly/Monthly 플랜을 DB 저장
-    //  - 또는 바로 Flutter에 반환하여 홈 화면에 반영 가능
-    //
-    // 현재는 API 없이 로딩 후 홈 이동만 동작
-    // ======================================================================
-
-    if (!mounted) return;
-
-    // 홈으로 스택 정리 후 이동 (이전 화면 전체 삭제)
-    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
-  }
 
   @override
   Widget build(BuildContext context) {

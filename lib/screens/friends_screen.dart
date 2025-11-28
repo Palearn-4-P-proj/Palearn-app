@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/api_service.dart';
 
 const _blue = Color(0xFF7DB2FF);
 const _blueLight = Color(0xFFE7F0FF);
@@ -27,28 +28,28 @@ class _FriendsScreenState extends State<FriendsScreen> {
   Future<void> _loadFriends() async {
     setState(() => _loading = true);
 
-    // ================================================================
-    // TODO(백엔드 연동 필요, GET):
-    // FastAPI에서 "친구 목록"을 가져와야 하는 부분.
-    //
-    // 예시:
-    // GET /friends
-    //
-    // 서버 응답 예:
-    // [
-    //   {"id": "u001", "name": "은진", "todayRate": 70, "avatarUrl": "..."},
-    //   {"id": "u002", "name": "예진", "todayRate": 50}
-    // ]
-    //
-    // 현재는 더미 대기 후 빈 리스트만 넣고 있음 → 실제 서비스에서는 반드시 GET으로 대체해야 함.
-    // ================================================================
-
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    setState(() {
-      _friends = [];   // ← 실제 GET 결과 리스트로 변경 필요
-      _loading = false;
-    });
+    try {
+      final data = await FriendsService.getFriends();
+      if (mounted) {
+        setState(() {
+          _friends = data.map((item) => FriendSummary(
+            id: item['id']?.toString() ?? '',
+            name: item['name']?.toString() ?? '',
+            todayRate: item['todayRate'] ?? 0,
+            avatarUrl: item['avatarUrl']?.toString(),
+          )).toList();
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading friends: $e');
+      if (mounted) {
+        setState(() {
+          _friends = [];
+          _loading = false;
+        });
+      }
+    }
   }
 
   Future<void> _addByCode() async {
@@ -57,30 +58,25 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
     setState(() => _adding = true);
 
-    // ================================================================
-    // TODO(백엔드 연동 필요, POST):
-    // 친구 코드를 입력하면 서버로 친구 추가 요청을 보내야 하는 부분.
-    //
-    // POST /friends/add
-    // body:
-    // {
-    //   "code": "입력한 친구 코드"
-    // }
-    //
-    // - 서버는 code로 사용자를 조회하고 친구로 등록해줌
-    // - 성공 시 true/false 또는 친구 객체 반환
-    //
-    // 현재는 더미 대기 후 UI만 갱신함 → 실제 서비스에서는 반드시 POST 필요
-    // ================================================================
+    try {
+      await FriendsService.addFriend(code: code);
+      if (!mounted) return;
 
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-
-    _codeCtrl.clear();
-    setState(() => _adding = false);
-
-    // 친구 추가 완료 후 목록 다시 불러오기 → GET
-    await _loadFriends();
+      _codeCtrl.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('친구가 추가되었습니다!')),
+      );
+      await _loadFriends();
+    } catch (e) {
+      debugPrint('Error adding friend: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('친구 추가 실패: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _adding = false);
+    }
   }
 
   @override

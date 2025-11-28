@@ -22,6 +22,7 @@ class QuizResultScreen extends StatelessWidget {
     final _level = args?['level'] ?? level;
     final _rate = (args?['rate'] ?? rate) as double;
     final _details = (args?['details'] ?? details) as List<bool>;
+    final _skill = args?['skill']?.toString() ?? 'general';
     final percent = (_rate * 100).round();
 
     return Scaffold(
@@ -178,7 +179,11 @@ class QuizResultScreen extends StatelessWidget {
                             //    arguments: courses);
                             // =====================================================
 
-                            Navigator.pushNamed(context, '/recommend_courses');
+                            Navigator.pushNamed(
+                              context,
+                              '/recommend_courses',
+                              arguments: {'skill': _skill, 'level': _level},
+                            );
                           },
                         ),
                       ],

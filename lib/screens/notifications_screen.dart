@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/api_service.dart';
 
 const _blue = Color(0xFF7DB2FF);
 const _ink = Color(0xFF0E3E3E);
@@ -24,49 +25,30 @@ class _NotificationScreenState extends State<NotificationScreen> {
     _loadNotifications();
   }
 
-  // ===========================================================================
-  // 🟦 [중요] 알림 불러오기 — FastAPI 연동이 필요한 부분 (GET 요청)
-  //
-  // GET /notifications?user_id=123
-  //
-  // 응답 예:
-  // {
-  //   "new_alerts": ["오늘의 계획은 ~~ 입니다.", "Amy 님의 친구 신청"],
-  //   "old_alerts": ["Uni 님의 친구 신청"]
-  // }
-  //
-  // Flutter에서는 token을 포함하여 Authorization 헤더로 요청해야 함:
-  //
-  // final res = await http.get(
-  //   Uri.parse('$BASE_URL/notifications'),
-  //   headers: {"Authorization": "Bearer $token"},
-  // );
-  //
-  // 받아온 데이터 _newAlerts, _oldAlerts에 저장
-  // ===========================================================================
   Future<void> _loadNotifications() async {
-    // TODO: 실제 서버 통신 필요
-    // 예)
-    // final alerts = await NotificationAPI.getAlerts();
-    // setState(() {
-    //   _newAlerts = alerts.newAlerts;
-    //   _oldAlerts = alerts.oldAlerts;
-    //   _loading = false;
-    // });
-
-    // 🔸 현재는 데모용 더미 데이터
-    await Future.delayed(const Duration(milliseconds: 400));
-    setState(() {
-      _newAlerts = [
-        '오늘의 계획은 ~~ 입니다.',
-        '오늘이 끝나기까지 계획을 완성하세요!',
-        'Amy 님의 친구 신청',
-      ];
-      _oldAlerts = [
-        'Uni 님의 친구 신청',
-      ];
-      _loading = false;
-    });
+    try {
+      final data = await NotificationService.getNotifications();
+      if (mounted) {
+        setState(() {
+          _newAlerts = (data['new_alerts'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ?? [];
+          _oldAlerts = (data['old_alerts'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ?? [];
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading notifications: $e');
+      if (mounted) {
+        setState(() {
+          _newAlerts = [];
+          _oldAlerts = [];
+          _loading = false;
+        });
+      }
+    }
   }
 
   @override

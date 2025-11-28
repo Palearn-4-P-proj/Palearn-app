@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-// 📌 백엔드 연동 시 필요한 import
-// import 'package:http/http.dart' as http;
-// import 'dart:convert';
+import '../data/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -25,57 +23,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadMyProfile();
   }
 
-  // =========================================================================
-  // 🟦 [중요] 프로필 불러오기 — FastAPI GET 필요
-  //
-  // GET /profile/me  또는  GET /profile/{user_id}
-  //
-  // 응답 예:
-  // {
-  //   "name": "한은진",
-  //   "user_id": "25030024",
-  //   "photo_url": "https://...",
-  // }
-  //
-  // Flutter 예:
-  // final res = await http.get(Uri.parse('$BASE/profile/me'),
-  //     headers: {"Authorization": "Bearer $token"});
-  // final data = json.decode(res.body);
-  //
-  // setState(() {
-  //   name = data["name"];
-  //   userId = data["user_id"];
-  //   photoUrl = data["photo_url"];
-  // });
-  //
-  // =========================================================================
   Future<void> _loadMyProfile() async {
-    await Future.delayed(const Duration(milliseconds: 200));
-
-    // TODO: 여기를 실제 GET API로 교체해야 함
-
-    setState(() => loading = false);
+    try {
+      final data = await ProfileService.getProfile();
+      if (mounted) {
+        setState(() {
+          name = data['name']?.toString() ?? 'User';
+          userId = data['user_id']?.toString() ?? '';
+          photoUrl = data['photo_url']?.toString() ??
+              'https://images.unsplash.com/photo-1603415526960-f7e0328d13a2?w=256&h=256&fit=crop';
+          loading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading profile: $e');
+      if (mounted) {
+        setState(() => loading = false);
+      }
+    }
   }
 
-  // =========================================================================
-  // 🟦 [중요] 로그아웃 — FastAPI POST 필요 (토큰 제거 or 세션 만료)
-  //
-  // POST /auth/logout
-  //
-  // Flutter 예:
-  // await http.post(Uri.parse('$BASE/auth/logout'),
-  //      headers: {"Authorization": "Bearer $token"});
-  //
-  // 그리고 local storage에서 토큰 삭제:
-  // await storage.delete(key: 'token');
-  //
-  // =========================================================================
   void _logout() async {
-    // TODO: 서버 로그아웃 API 연동 필요
+    try {
+      await AuthService.logout();
+    } catch (e) {
+      debugPrint('Error during logout: $e');
+    }
 
     if (!mounted) return;
-
-    // 클라이언트 이동 처리
     Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
   }
 
