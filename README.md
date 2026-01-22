@@ -48,5 +48,26 @@ Palearn은 보기만 하는 계획 앱이 아니라 바로 행동하게 만드�
 
 ## 🖼️ UI 미리보기
 
+### 회원가입
+<img src="image/signup.jpg" width="700" />
+
 ### 홈 화면
 <img src="image/home.jpg" width="700" />
+
+### 학습 계획 생성
+<img src="iimage/plan.jpg" width="700" />
+
+### 퀴즈 생성
+<img src="image/quiz.jpg" width="700" />
+
+### 강의 추천
+<img src="image/recommend.jpg" width="700" />
+
+### 친구 기능
+<img src="image/friend.jpg" width="700" />
+
+### 프로필
+<img src="image/profile.jpg" width="700" />
+
+### 부가기능
+<img src="image/search.jpg" width="700" />
