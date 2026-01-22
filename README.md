@@ -49,4 +49,4 @@ Palearn은 보기만 하는 계획 앱이 아니라 바로 행동하게 만드�
 ## 🖼️ UI 미리보기
 
 ### 홈 화면
-<img src="images/home.png" width="280" />
+<img src="image/home.jpg" width="280" />
