@@ -55,7 +55,7 @@ Palearn은 보기만 하는 계획 앱이 아니라 바로 행동하게 만드�
 <img src="image/home.jpg" width="700" />
 
 ### 학습 계획 생성
-<img src="iimage/plan.jpg" width="700" />
+<img src="image/plan.jpg" width="700" />
 
 ### 퀴즈 생성
 <img src="image/quiz.jpg" width="700" />
