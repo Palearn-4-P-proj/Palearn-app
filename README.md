@@ -1,5 +1,5 @@
 # Palearn
-사용자 입력 기반 AI 학습 계획·관리 앱 'Palearn'
+사용자 입력 기반 AI 학습 계획·관리 앱 'Palearn'<br>
 👉🏼 https://palearn-final-app-3.vercel.app
 
 ## 프로젝트 소개 
